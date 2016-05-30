@@ -1,0 +1,9 @@
+#! /bin/bash
+
+# env variables
+CONTAINER_NAME="$(basename `pwd`)"
+BASE_NAME="jerady"
+DOCKER_RUN="docker run -ti -p 1883:1883 -p 8883:8883 --name $CONTAINER_NAME $IMAGE_NAME"
+
+# call dockerw, passing arguments and using env variables
+. ../bin/dockerw

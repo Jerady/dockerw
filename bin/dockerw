@@ -1,0 +1,181 @@
+#! /bin/bash
+
+VERSION=1.0
+
+function print_dockerw_header {
+cat <<EOF
+     _            _
+    | |          | |
+  __| | ___   ___| | _____ _ ____      __
+ / _' |/ _ \ / __| |/ / _ \ '__\ \ /\ / /
+| (_| | (_) | (__|   <  __/ |   \ V  V /
+ \__,_|\___/ \___|_|\_\___|_|    \_/\_/
+
+EOF
+}
+
+function print_title {
+	printf '%s\n\e[1m %s \e[m\n%s\n' "$DIVIDER" "$1" "$DIVIDER"
+}
+
+function print_done {
+	printf '\e[1;32mDone.\e[m\n%s\n' "$DIVIDER"
+}
+
+function print_message {
+	printf "%s: \e[1m%s\e[m\n" "$1" "$2"
+}
+
+function print_green {
+	printf '\e[1;32m%s\e[m\n' "$1"
+}
+
+function print_red {
+	printf '\e[1;31m%s\e[m\n' "$1"
+}
+
+function print_bold {
+	printf '\e[1m%s\e[m\n' "$1"
+}
+
+function print_env {
+  echo
+  print_bold "$(basename $0) environment:"
+  echo "CONTAINER_NAME = $CONTAINER_NAME"
+  echo "BASE_NAME      = $BASE_NAME"
+  echo "IMAGE_NAME     = $IMAGE_NAME"
+  echo "DOCKER_RUN     = $DOCKER_RUN"
+  echo
+}
+
+function help {
+  print_dockerw_header
+  printf '\e[1m%s\e[m%s\n' "$(basename $0)" ", a simple docker command wrapper for the rest of us"
+  printf '\e[1m%s\e[m\n' "version $VERSION, (c) copyright 2016 Jens Deters / www.jensd.de"
+  echo
+
+  print_message "Usage:" "$0 [ build | run | stop | clean | env | help ]"
+cat <<EOF
+
+  build : builds the docker image
+  run   : runs a docker container in foreground based on the image
+          (docker run -ti [...]: Allocate a pseudo-tty & keep STDIN open even if not attached)
+  stop  : stops all running container based on the image and removes them
+  clean : calles "stop" and then removes all images
+  env   : list current environment variables
+  help  : display this help
+
+EOF
+}
+
+function build {
+  print_title "docker BUILD"
+  build_image $IMAGE_NAME
+}
+
+function run {
+  print_title "docker RUN"
+  print_message "running container" "$CONTAINER_NAME from image $IMAGE_NAME"
+  $DOCKER_RUN
+}
+
+function stop {
+  print_title "docker STOP"
+  stop_remove_container $CONTAINER_NAME
+  print_done
+}
+
+function clean {
+  stop
+  print_title "docker CLEAN"
+  remove_image $IMAGE_NAME
+  print_done
+}
+
+function status {
+  print_title "docker image STATUS"
+  docker images $IMAGE_NAME
+}
+
+
+function build_image {
+  print_message "attempt to build image" $1
+  time docker build -t $1 .
+  if [ $? -eq 0 ]
+  then
+    status
+    print_green "Successfully build $IMAGE_NAME"
+  else
+    print_red "Failed to build $IMAGE_NAME"
+    exit 1
+  fi
+}
+
+function remove_image {
+	IMAGE=$(docker images | grep "$1" | awk '{ print $1}')
+  print_message "attemt to remove image" $1
+	if [ ! -z "$IMAGE" ]
+	then
+	 time docker rmi --force $IMAGE
+	else
+		print_message "no such image" $1
+	fi
+}
+
+function stop_remove_container {
+  CID=$(docker ps -a | grep "$1" | awk '{ print $1}')
+  print_message "attempt to stop running containers" $1
+  if [ ! -z "$CID" ]
+  then
+    echo -e "Stopping and removing containers with CID:\n$CID"
+    docker stop $CID
+    docker rm $CID
+  else
+    print_message "no running container found" $1
+  fi
+}
+
+function check_env_variables {
+  if [ -z $CONTAINER_NAME ]
+  then
+    CONTAINER_NAME="$(basename `pwd`)"
+    print_message "CONTAINER_NAME not set, using" "$CONTAINER_NAME"
+  fi
+
+  if [ -z $BASE_NAME ]
+  then
+    BASE_NAME="jerady"
+    print_message "BASE_NAME not set, using" "$BASE_NAME"
+  fi
+
+  if [ -z $DOCKER_RUN ]
+  then
+    DOCKER_RUN="docker run -ti --name $CONTAINER_NAME $IMAGE_NAME"
+    print_message "DOCKER_RUN not set, using" "$DOCKER_RUN"
+  fi
+
+  if [ -z $IMAGE_NAME ]
+  then
+    IMAGE_NAME="$BASE_NAME/$CONTAINER_NAME"
+    print_message "IMAGE_NAME not set, using" "$IMAGE_NAME"
+  fi
+
+}
+
+#
+# MAIN
+#
+
+check_env_variables
+exit 1
+
+case "$1" in
+  b|build)  build ;;
+  r|run)    run ;;
+  c|clean)  clean ;;
+  s|stop)   stop ;;
+  status)   status ;;
+  e|env)    print_env ;;
+  h|help)   help ;;
+  *)        help ;;
+esac
