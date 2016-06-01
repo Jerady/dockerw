@@ -1,7 +1,4 @@
 #! /bin/bash
 
-#echo "Ensure image ubuntu:16.04 is up-do-date..."
-#docker pull ubuntu:16.04
-
-# call dockerw, passing arguments and using env variables
-. ../bin/dockerw
+# call dockerw.sh, passing arguments and using env variables
+. ../dockerw/dockerw.sh
