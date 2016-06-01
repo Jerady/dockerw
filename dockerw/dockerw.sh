@@ -75,11 +75,10 @@ function help {
 cat <<EOF
 
   build  : builds the docker image
-  run    : runs a docker container in foreground based on the image
-          (docker run -ti [...]: Allocate a pseudo-tty & keep STDIN open even if not attached)
-  stop   : stops all running container based on the image and removes them
-  clean  : calles "stop" and then removes all images
-  status : shows the status if the docker image
+  run    : runs a docker container based on the image
+  stop   : stops ALL running container based on the image and removes them
+  clean  : stops and removes the image and containers
+  status : status if the docker image
   env    : list current environment variables
   help   : display this help
 
